@@ -1,4 +1,4 @@
-#template for AWS clod formation for the wordpress
+
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 

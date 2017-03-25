@@ -90,12 +90,42 @@
         },
     "Subnet" : {
           "Type" : "AWS::EC2::Subnet",
+          "DependsOn" : "VPC",
           "Properties" : {
             "VpcId" : { "Ref" : "VPC" },
             "CidrBlock" : "10.0.0.0/24",
             "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} } ]
           }
         },
+    "IGW" : {
+             "Type" : "AWS::EC2::InternetGateway",
+             "Properties" : {
+                "Tags" : [ {"Name" : "Owner", "Value" : "arun.sanna"}]
+             }
+          }
+    "RouteTable" : {
+             "Type" : "AWS::EC2::RouteTable",
+             "DependsOn" : "IGW",
+             "Properties" : {
+                   "VpcId" : { "Ref": "VPC" }
+                }
+         }
+    "Route" : {
+            "Type" : "AWS::EC2::Route",
+            "DependsOn" : "IGW",
+              "Properties" : {
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref": "IGW" },
+                "RouteTableId" : { "Ref": "RouteTable" }
+    }
+    "RouteTableAssoc" : {
+             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+             "DependsOn" : "Subnet",
+             "Properties" : {
+               "RouteTableId" : { "Ref": "RouteTable" }
+               "SubnetId" : { "Ref": "Subnet" }
+             }
+     }
     "WebServerSecurityGroup" : {
           "Type" : "AWS::EC2::SecurityGroup",
           "Properties" : {
@@ -112,7 +142,7 @@
                   "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
                                     { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
                   "InstanceType"   : { "Ref" : "InstanceType" },
-                  "SecurityGroups" : [ {"Ref" : "WebServerSecurityGroup"} ],
+                  "SecurityGroups" : [ { "Fn::GetAtt" : [ "WebServerSecurityGroup", "GroupId" ] } ],
                   "KeyName"        : { "Ref" : "KeyName" },
                   "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
                                  "#!/bin/bash -xe\n",
@@ -129,7 +159,10 @@
                                  "         --resource WebServer ",
                                  "         --region ", { "Ref" : "AWS::Region" }, "\n"
                   ]]}}
+                  "Tags" : [ {"Key" : "Owner", "Value" : "arun.sanna"},{"Key" : "Environment", "Value" : "Application-test" },{"Key" : "ExpirationDate", "Value" :  } ]
                 },
+                "SubnetId" : { "Ref": "Subnet" }
+                
                 "CreationPolicy" : {
                   "ResourceSignal" : {
                     "Timeout" : "PT15M"
